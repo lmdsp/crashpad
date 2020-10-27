@@ -59,10 +59,6 @@ void ShowReportDialog()
     MessageBoxW(nullptr, L"Please describe what you were doing before the crash", L"Crash report", flags);
 #endif // OS_WIN
 
-#if defined(OS_MAC)
-    // https://developer.apple.com/documentation/corefoundation/cfusernotification?language=objc
-#endif 
-
 }
 
 unsigned int CrashReportExceptionHandler::ExceptionHandlerServerException(

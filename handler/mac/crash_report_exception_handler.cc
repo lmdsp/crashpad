@@ -41,6 +41,10 @@
 #include "util/misc/tri_state.h"
 #include "util/misc/uuid.h"
 
+#if defined(OS_MAC)
+#include <CoreFoundation/CoreFoundation.h>
+#endif // OS_MAC
+
 namespace crashpad {
 
 CrashReportExceptionHandler::CrashReportExceptionHandler(
@@ -56,6 +60,30 @@ CrashReportExceptionHandler::CrashReportExceptionHandler(
       user_stream_data_sources_(user_stream_data_sources) {}
 
 CrashReportExceptionHandler::~CrashReportExceptionHandler() {
+}
+
+void ShowReportDialog()
+{
+    LOG(INFO) << "Showing user report dialog";
+    
+#if defined(OS_MAC)
+    // https://developer.apple.com/documentation/corefoundation/cfusernotification?language=objc
+    const CFTimeInterval timeout = 0;
+    CFOptionFlags response = 0;
+    
+    const SInt32 result = CFUserNotificationDisplayAlert(timeout,
+                                   kCFUserNotificationStopAlertLevel,
+                                   nullptr,
+                                   nullptr,
+                                   nullptr,
+                                   CFSTR("Crash report"),
+                                   CFSTR("Please describe what you were doing before the crash"),
+                                   nullptr,
+                                   nullptr,
+                                   nullptr,
+                                   &response);
+#endif // OS_MAC
+    
 }
 
 kern_return_t CrashReportExceptionHandler::CatchMachException(
@@ -110,6 +138,8 @@ kern_return_t CrashReportExceptionHandler::CatchMachException(
     Metrics::ExceptionCaptureResult(Metrics::CaptureResult::kSnapshotFailed);
     return KERN_FAILURE;
   }
+    
+  ShowReportDialog();
 
   // Check for suspicious message sources. A suspicious exception message comes
   // from a source other than the kernel or the process that the exception
