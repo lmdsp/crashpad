@@ -103,6 +103,7 @@ if(NOT IOS)
     if(WIN32)
         if(MSVC)
             target_link_options(crashpad_handler PRIVATE "/SUBSYSTEM:WINDOWS")
+			set_property(TARGET crashpad_handler PROPERTY VS_DPI_AWARE "PerMonitor")
         endif()
     endif()
 
