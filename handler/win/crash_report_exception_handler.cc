@@ -49,6 +49,22 @@ CrashReportExceptionHandler::~CrashReportExceptionHandler() {}
 
 void CrashReportExceptionHandler::ExceptionHandlerServerStarted() {}
 
+void ShowReportDialog()
+{
+    LOG(INFO) << "Showing user report dialog";
+
+#if defined(OS_WIN)
+    constexpr unsigned int flags = MB_OK | MB_ICONERROR | MB_SYSTEMMODAL;
+
+    MessageBoxW(nullptr, L"Please describe what you were doing before the crash", L"Crash report", flags);
+#endif // OS_WIN
+
+#if defined(OS_MAC)
+    // https://developer.apple.com/documentation/corefoundation/cfusernotification?language=objc
+#endif 
+
+}
+
 unsigned int CrashReportExceptionHandler::ExceptionHandlerServerException(
     HANDLE process,
     WinVMAddress exception_information_address,
@@ -80,6 +96,9 @@ unsigned int CrashReportExceptionHandler::ExceptionHandlerServerException(
   CrashpadInfoClientOptions client_options;
   process_snapshot.GetCrashpadOptions(&client_options);
   if (client_options.crashpad_handler_behavior != TriState::kDisabled) {
+
+    ShowReportDialog();
+
     UUID client_id;
     Settings* const settings = database_->GetSettings();
     if (settings) {
