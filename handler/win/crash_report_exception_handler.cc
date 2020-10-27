@@ -49,14 +49,108 @@ CrashReportExceptionHandler::~CrashReportExceptionHandler() {}
 
 void CrashReportExceptionHandler::ExceptionHandlerServerStarted() {}
 
+#if defined(OS_WIN)
+
+LRESULT CALLBACK ReportWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_CREATE:
+    {
+        // Text entry
+     
+
+        // Add attachments
+
+        // Submit button
+        CreateWindowW(L"Button",
+                      L"Submit",
+                      WS_VISIBLE | WS_CHILD,
+                      20,
+                      50,
+                      80,
+                      25,
+                      hwnd,
+                      nullptr,
+                      nullptr,
+                      nullptr);
+        break;
+    }
+
+    case WM_COMMAND:
+    {
+        break;
+    }
+
+    case WM_DESTROY:
+    {
+        // TODO Exit loop
+        // break;
+    }
+
+    }
+
+    return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+
+#endif // OS_WIN
+
 void ShowReportDialog()
 {
     LOG(INFO) << "Showing user report dialog";
 
 #if defined(OS_WIN)
+#if 0
     constexpr unsigned int flags = MB_OK | MB_ICONERROR | MB_SYSTEMMODAL;
 
-    MessageBoxW(nullptr, L"Please describe what you were doing before the crash", L"Crash report", flags);
+    // MessageBoxW(nullptr, L"Please describe what you were doing before the crash", L"Crash report", flags);
+
+#else
+
+    // http://zetcode.com/gui/winapi/window/
+    WNDCLASSW wc{};
+
+    HWND hdesktop = GetDesktopWindow();
+
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.lpszClassName = L"Crashpad.Reporter";
+    wc.lpfnWndProc = ReportWndProc;
+    wc.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
+    wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    wc.hIcon = LoadIcon(nullptr, IDI_EXCLAMATION);
+
+    RegisterClassW(&wc);
+
+    int create_params = 0;
+
+    DWORD style = WS_OVERLAPPEDWINDOW;
+
+    style = WS_DLGFRAME;
+    style = WS_POPUP;
+
+    HWND hwnd = CreateWindowW(wc.lpszClassName,
+                              L"Crash report",
+                              style | WS_VISIBLE,
+                              CW_USEDEFAULT,
+                              CW_USEDEFAULT,
+                              400,
+                              300,
+                              hdesktop,
+                              nullptr,
+                              nullptr,
+                              &create_params);
+
+    UpdateWindow(hwnd);
+
+    MSG msg{};
+
+    while (GetMessage(&msg, nullptr, 0, 0))
+    {
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
+    }
+#endif // 0
+
 #endif // OS_WIN
 
 }
