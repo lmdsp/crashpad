@@ -62,14 +62,74 @@ CrashReportExceptionHandler::CrashReportExceptionHandler(
 CrashReportExceptionHandler::~CrashReportExceptionHandler() {
 }
 
+namespace {
+
+#define REPORT_MSG \
+"This applications has crashed.\n" \
+"\n" \
+"Please enter your message below\n"
+
 void ShowReportDialog()
 {
     LOG(INFO) << "Showing user report dialog";
     
 #if defined(OS_MAC)
-    // https://developer.apple.com/documentation/corefoundation/cfusernotification?language=objc
+    
     const CFTimeInterval timeout = 0;
     CFOptionFlags response = 0;
+    
+#if 1
+    // https://developer.apple.com/documentation/corefoundation/cfusernotification/dialog_description_keys?language=objc
+    const void* keys[]
+    {
+        kCFUserNotificationAlertHeaderKey,
+        kCFUserNotificationAlertMessageKey,
+        // kCFUserNotificationProgressIndicatorValueKey,
+        kCFUserNotificationTextFieldTitlesKey,
+        kCFUserNotificationTextFieldValuesKey,
+        kCFUserNotificationDefaultButtonTitleKey
+    };
+    
+    const void* values[]
+    {
+        CFSTR("Crash report"),
+        CFSTR(REPORT_MSG),
+        // kCFBooleanTrue,
+        CFSTR("Your message\n"),
+        CFSTR(""),
+        CFSTR("Submit")
+    };
+    
+    CFDictionaryRef parameters = CFDictionaryCreate(0,
+                                                    keys,
+                                                    values,
+                                                    sizeof(keys) / sizeof(*keys),
+                                                    &kCFTypeDictionaryKeyCallBacks,
+                                                    &kCFTypeDictionaryValueCallBacks);
+    
+    SInt32 err = 0;
+    
+    // kCFUserNotificationPlainAlertLevel
+    CFUserNotificationRef notification = CFUserNotificationCreate(kCFAllocatorDefault,
+                             timeout,
+                             kCFUserNotificationStopAlertLevel | kCFUserNotificationNoDefaultButtonFlag,
+                             &err,
+                             parameters);
+    
+    // https://developer.apple.com/documentation/corefoundation/1534477-cfusernotificationreceiverespons?language=objc
+    SInt32 result = CFUserNotificationReceiveResponse(notification, timeout, &response);
+    
+    // Contains TextFieldValues as dict
+    // CFDictionaryRef rdata = CFUserNotificationGetResponseDictionary(notification);
+    // CFShow(rdata);
+    
+    CFStringRef msg = CFUserNotificationGetResponseValue(notification, kCFUserNotificationTextFieldValuesKey, 0);
+    
+    CFShow(msg);
+#else
+    // https://developer.apple.com/documentation/corefoundation/cfusernotification?language=objc
+    
+   
     
     const SInt32 result = CFUserNotificationDisplayAlert(timeout,
                                    kCFUserNotificationStopAlertLevel,
@@ -82,8 +142,13 @@ void ShowReportDialog()
                                    nullptr,
                                    nullptr,
                                    &response);
+    
+#endif // 1
+    
 #endif // OS_MAC
     
+}
+
 }
 
 kern_return_t CrashReportExceptionHandler::CatchMachException(
