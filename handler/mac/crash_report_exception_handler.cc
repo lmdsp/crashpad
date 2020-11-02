@@ -62,12 +62,30 @@ CrashReportExceptionHandler::CrashReportExceptionHandler(
 CrashReportExceptionHandler::~CrashReportExceptionHandler() {
 }
 
+#define REPORT_MESSAGE_DIALOG 0
+
 namespace {
 
+#if REPORT_MESSAGE_DIALOG
+
 #define REPORT_MSG \
-"This applications has crashed.\n" \
+"The application has crashed." \
 "\n" \
-"Please enter your message below\n"
+"Please describe what actions you have performed" \
+"before this happened." \
+"This will help use improve the software"
+
+#else
+#define REPORT_MSG \
+"This application has unfortunately crashed." \
+"\n" \
+"We're sorry about that.\n" \
+"\n" \
+"An anonymous report will now be collected and sent to our server.\n" \
+"This will help us greatly to understand and fix the issue.\n" \
+"\n" \
+"Thank you."
+#endif // REPORT_MESSAGE_DIALOG
 
 void ShowReportDialog()
 {
@@ -78,7 +96,7 @@ void ShowReportDialog()
     const CFTimeInterval timeout = 0;
     CFOptionFlags response = 0;
     
-#if 1
+#if REPORT_MESSAGE_DIALOG
     // https://developer.apple.com/documentation/corefoundation/cfusernotification/dialog_description_keys?language=objc
     const void* keys[]
     {
@@ -128,22 +146,19 @@ void ShowReportDialog()
     CFShow(msg);
 #else
     // https://developer.apple.com/documentation/corefoundation/cfusernotification?language=objc
-    
-   
-    
     const SInt32 result = CFUserNotificationDisplayAlert(timeout,
                                    kCFUserNotificationStopAlertLevel,
                                    nullptr,
                                    nullptr,
                                    nullptr,
                                    CFSTR("Crash report"),
-                                   CFSTR("Please describe what you were doing before the crash"),
+                                   CFSTR(REPORT_MSG),
                                    nullptr,
                                    nullptr,
                                    nullptr,
                                    &response);
     
-#endif // 1
+#endif // REPORT_MESSAGE_DIALOG
     
 #endif // OS_MAC
     

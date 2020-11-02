@@ -49,12 +49,41 @@ CrashReportExceptionHandler::~CrashReportExceptionHandler() {}
 
 void CrashReportExceptionHandler::ExceptionHandlerServerStarted() {}
 
+#define REPORT_MESSAGE_TEXT 0
+#define REPORT_MESSAGE_DIALOG 1
+
 #if defined(OS_WIN)
 
 struct ReportData
 {
     std::vector<wchar_t> text;
 };
+
+#if REPORT_MESSAGE_TEXT
+constexpr const wchar_t* s_alert_text =
+LR"(The application has crashed.
+
+Please describe what actions you have performed
+before this happened.
+This will help use improve the software)";
+
+constexpr int report_h = 400;
+#else
+constexpr const wchar_t* s_alert_text =
+LR"(This application has unfortunately crashed.
+
+We're sorry about that.
+
+An anonymous report will now be collected
+and sent to our server.
+This will help us greatly to understand and fix the issue.
+
+Thank you.)";
+
+constexpr int report_h = 340;
+#endif // REPORT_MESSAGE_TEXT
+
+#if REPORT_MESSAGE_DIALOG
 
 void CenterWindow(HWND hwnd)
 {
@@ -78,15 +107,7 @@ void CenterWindow(HWND hwnd)
 }
 
 constexpr int report_w = 500;
-constexpr int report_h = 400;
 constexpr int margins = 20;
-
-constexpr const wchar_t* info_msg =
-LR"(The application has crashed.
-
-Please describe what actions you have performed
-before this happened.
-This will help use improve the software)";
 
 LRESULT CALLBACK ReportWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -120,12 +141,17 @@ LRESULT CALLBACK ReportWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
 
         // Why do we need 3x here and not 2x ???
         const int info_w = w - (3 * margins);
+
+#if REPORT_MESSAGE_TEXT
         const int info_h = h / 3 - margins;
-        const int edit_h = h / 3 - margins;
+#else
+        const int info_h = h / 2 - margins;
+#endif // REPORT_MESSAGE_TEXT
+        
 
         // Info
         CreateWindowW(L"Static",
-                      info_msg,
+                      s_alert_text,
                       WS_CHILD | WS_VISIBLE,  // | SS_LEFT,
                       margins,
                       margins,
@@ -135,6 +161,9 @@ LRESULT CALLBACK ReportWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
                       reinterpret_cast<HMENU>(info_id),
                       nullptr,
                       nullptr);
+
+#if REPORT_MESSAGE_TEXT
+        const int edit_h = h / 3 - margins;
 
         // Text entry
         hedit = CreateWindowW(L"Edit",
@@ -154,19 +183,27 @@ LRESULT CALLBACK ReportWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
         // SendMessage(hedit, EM_SETLIMITTEXT, max_chars, 0);
 
         // LOG(INFO) << "Edit hwnd: " << hedit;
+#endif // REPORT_MESSAGE_TEXT
 
         // TODO Add attachments
-
         constexpr int btn_w = 130;
         constexpr int btn_h = 36;
+
+#if REPORT_MESSAGE_TEXT
+        constexpr const wchar_t* s_button = L"Submit";
+        const int btn_y = info_h + edit_h + 3 * margins;
+#else
+        constexpr const wchar_t* s_button = L"Submit";
+        const int btn_y = info_h + 3 * margins;
+#endif // REPORT_MESSAGE_TEXT
 
         // Submit button
         // https://docs.microsoft.com/en-us/windows/win32/controls/button-styles
         CreateWindowW(L"Button",
-                      L"Submit",
+                      s_button,
                       WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
                       w / 2 - (btn_w / 2),
-                      info_h + edit_h + 3 * margins,
+                      btn_y,
                       btn_w,
                       btn_h,
                       hwnd,
@@ -191,6 +228,8 @@ LRESULT CALLBACK ReportWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
 
             if (btn_id == submit_id)
             {
+
+#if REPORT_MESSAGE_TEXT
               if (nullptr != hedit)
               {
                 const int tlen = GetWindowTextLengthW(hedit) + 1;
@@ -216,6 +255,7 @@ LRESULT CALLBACK ReportWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
               }
 
               LOG(INFO) << "Submitting user report";
+#endif // REPORT_MESSAGE_TEXT
 
               DestroyWindow(hwnd);
 
@@ -250,22 +290,25 @@ LRESULT CALLBACK ReportWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
     return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
+#endif // REPORT_MESSAGE_DIALOG
+
 #endif // OS_WIN
 
 ReportData ShowReportDialog()
 {
-    LOG(INFO) << "Showing user report dialog";
-
     ReportData rdata;
 
 #if defined(OS_WIN)
-#if 0
-    constexpr unsigned int flags = MB_OK | MB_ICONERROR | MB_SYSTEMMODAL;
+#if !REPORT_MESSAGE_DIALOG
+    LOG(INFO) << "Showing crash alert";
 
-    // MessageBoxW(nullptr, L"Please describe what you were doing before the crash", L"Crash report", flags);
+    // MB_TOPMOST
+    constexpr unsigned int flags = MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND;
+
+    MessageBoxW(nullptr, s_alert_text, L"Crash report", flags);
 
 #else
-
+    LOG(INFO) << "Showing user report dialog";
     // http://zetcode.com/gui/winapi/window/
     WNDCLASSW wc{};
 
@@ -280,16 +323,21 @@ ReportData ShowReportDialog()
 
     RegisterClassW(&wc);
 
-    DWORD style = WS_OVERLAPPEDWINDOW;
+    DWORD style = WS_OVERLAPPED;
 
-    style = WS_DLGFRAME;
-    style = WS_POPUP;
+    style &= WS_CAPTION;
+    style &= WS_SYSMENU;
+    style &= WS_THICKFRAME;
+    // style = WS_DLGFRAME;
+    style &= WS_POPUP;
     style = WS_OVERLAPPEDWINDOW;
-
+    style &= ~WS_MINIMIZEBOX;
+    style &= ~WS_MAXIMIZEBOX;
     // No resize
     style &= ~WS_THICKFRAME;
 
-    HWND hwnd = CreateWindowW(wc.lpszClassName,
+    HWND hwnd = CreateWindowExW(WS_EX_DLGMODALFRAME | WS_EX_TOPMOST,
+        wc.lpszClassName,
                               L"Crash report",
                               style | WS_VISIBLE,
                               CW_USEDEFAULT,
@@ -321,7 +369,7 @@ ReportData ShowReportDialog()
     LOG(INFO) << "User report dialog closed";
 #endif // 0
 
-#endif // OS_WIN
+#endif // REPORT_MESSAGE_DIALOG
 
     return rdata;
 }
