@@ -90,7 +90,7 @@ if(MSVC)
     target_compile_options(crashpad_interface INTERFACE
         $<$<COMPILE_LANGUAGE:C,CXX>:/FS>
         $<$<COMPILE_LANGUAGE:C,CXX>:/W4>
-        $<$<COMPILE_LANGUAGE:C,CXX>:/WX>
+        # $<$<COMPILE_LANGUAGE:C,CXX>:/WX>
         $<$<COMPILE_LANGUAGE:C,CXX>:/Zi>
         $<$<COMPILE_LANGUAGE:C,CXX>:/bigobj> # Support larger number of sections in obj file.
         $<$<COMPILE_LANGUAGE:C,CXX>:/wd4100> # Unreferenced formal parameter.
@@ -100,6 +100,8 @@ if(MSVC)
         $<$<COMPILE_LANGUAGE:C,CXX>:/wd4577> # 'noexcept' used with no exception handling mode specified.
         $<$<COMPILE_LANGUAGE:C,CXX>:/wd4996> # 'X' was declared deprecated.
     )
+
+	# target_compile_options(crashpad_interface INTERFACE $<$<COMPILE_LANGUAGE:C,CXX>:/wd2220>)
 elseif(MINGW)
     # redirect to wmain
     # FIXME: cmake 3.13 added target_link_options
