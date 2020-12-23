@@ -200,7 +200,7 @@ if(APPLE)
             process/process_memory_mac.cc
             process/process_memory_mac.h
         )
-    elseif()
+    else()
         target_sources(crashpad_util PRIVATE
             ios/exception_processor.h
             ios/exception_processor.mm
@@ -334,7 +334,7 @@ if(APPLE)
     if(NOT IOS)
         set(def_relative_files "exc.defs" "mach_exc.defs" "notify.defs")
         set(input_files "${CMAKE_CURRENT_LIST_DIR}/mach/child_port.defs")
-    elseif()
+    else()
         set(def_relative_files "")
         set(input_files
             "${CMAKE_CURRENT_LIST_DIR}/../third_party/xnu/osfmk/mach/exc.defs"
@@ -356,6 +356,25 @@ if(APPLE)
     set(output_dir "${CMAKE_CURRENT_BINARY_DIR}/util/mach")
     file(MAKE_DIRECTORY "${output_dir}")
 
+    get_property(archs TARGET crashpad_util PROPERTY OSX_ARCHITECTURES)
+    if(NOT archs)
+        if(IOS)
+            set(archs "arm64")
+        else()
+            set(archs "x86_64")
+        endif()
+    endif()
+    list(TRANSFORM archs PREPEND "--arch=")
+
+    set(includes
+        "${CMAKE_CURRENT_SOURCE_DIR}/.."
+        "${CMAKE_CURRENT_SOURCE_DIR}/../compat/mac"
+    )
+    if(IOS)
+        list(APPEND includes "${CMAKE_CURRENT_SOURCE_DIR}/../compat/ios")
+    endif()
+    list(TRANSFORM includes PREPEND "--include=")
+
     # Create generate rule for each input file. Add each generated output
     # as a source to the target.
     foreach(input ${input_files})
@@ -368,7 +387,7 @@ if(APPLE)
             OUTPUT
             ${output_files}
             COMMAND
-            "${PYTHON_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/mach/mig.py" "${input}" ${output_files}
+            "${PYTHON_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/mach/mig.py" ${archs} ${includes} "${input}" ${output_files}
             DEPENDS
             "${CMAKE_CURRENT_SOURCE_DIR}/mach/mig.py" "${input}"
         )
@@ -397,6 +416,11 @@ if(APPLE)
         "-framework Foundation"
         "-framework IOKit"
     )
+    if(IOS)
+        target_link_libraries(crashpad_util PRIVATE
+            "-framework UIKit"
+        )
+    endif()
 endif()
 
 if(LINUX)
