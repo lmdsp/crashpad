@@ -30,6 +30,7 @@ if(IOS)
     target_sources(crashpad_client PRIVATE
         crash_report_database_mac.mm
         crashpad_client_ios.cc
+        simulate_crash_ios.h
     )
 endif()
 
@@ -39,8 +40,8 @@ if(LINUX OR ANDROID)
         simulate_crash_linux.h
         client_argv_handling.cc
         client_argv_handling.h
-        crashpad_info_note.S
         crash_report_database_generic.cc
+        crashpad_info_note.S
     )
 endif()
 

@@ -15,6 +15,7 @@ mc_append_sources(
     check.h
     check_op.h
     compiler_specific.h
+    cxx17_backports.h
     debug/alias.cc
     debug/alias.h
     files/file_path.cc
@@ -50,9 +51,6 @@ mc_append_sources(
     rand_util.h
     scoped_clear_last_error.h
     scoped_generic.h
-    stl_util.h
-    strings/string16.cc
-    strings/string16.h
     strings/string_number_conversions.cc
     strings/string_number_conversions.h
     strings/string_piece.h
@@ -207,5 +205,9 @@ add_library(crashpad::mini_chromium ALIAS mini_chromium)
 crashpad_install_target(mini_chromium)
 crashpad_install_dev(DIRECTORY mini_chromium
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/crashpad"
+    FILES_MATCHING PATTERN "*.h"
+)
+crashpad_install_dev(DIRECTORY build
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/crashpad/mini_chromium"
     FILES_MATCHING PATTERN "*.h"
 )
